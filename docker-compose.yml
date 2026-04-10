@@ -1,0 +1,72 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    networks:
+      - app_network
+    ports:
+      - 5432:5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:latest
+    networks:
+      - app_network
+    ports:
+      - 6379:6379
+    volumes:
+      - redis_data:/data
+  traefik:
+    image: traefik:latest
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - traefik_data:/data
+    networks:
+      - app_network
+    command:
+      - --providers.docker=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --providers.docker.exposedbydefault=false
+
+  api:
+    image: api:latest
+    ports:
+      - 3000:3000
+    volumes:
+      - api_data:/data
+    command:
+      - bun run start
+    networks:
+      - app_network
+  worker:
+    image: worker:latest
+    ports:
+      - 4000:4000
+    volumes:
+      - worker_data:/data
+    command:
+      - bun run start
+    networks:
+      - app_network
+    depends_on:
+      - postgres
+      - redis
+      - api
+
+networks:
+  app_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  api_data:
+  worker_data:
+  traefik_data:
